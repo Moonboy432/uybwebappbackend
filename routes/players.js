@@ -45,6 +45,8 @@ router.put("/:id", protect, upload.single("avatar"), async (req, res) => {
       goals: Number(req.body.goals),
       assists: Number(req.body.assists),
       played: Number(req.body.played),
+      yellowCards: Number(req.body.yellowCards) || 0, // ✅ new
+      redCards: Number(req.body.redCards) || 0, // ✅ new
       debt: Number(req.body.debt),
     };
     if (req.file)
@@ -65,7 +67,7 @@ router.delete("/:id", protect, async (req, res) => {
     const player = await Player.findById(req.params.id);
     if (!player) return res.status(404).json({ message: "Player not found" });
 
-    // ✅ delete auth account too if linked
+    // delete auth account too if linked
     if (player.userId) {
       await User.findByIdAndDelete(player.userId);
     }
