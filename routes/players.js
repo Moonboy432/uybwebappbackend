@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Player = require("../models/Player");
-const protect = require("../middleware/auth");
 const multer = require("multer");
+const protect = require("../middleware/auth");
 const User = require("../models/User");
 
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
