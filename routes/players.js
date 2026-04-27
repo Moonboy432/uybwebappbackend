@@ -42,12 +42,12 @@ router.put("/:id", protect, upload.single("avatar"), async (req, res) => {
   try {
     const update = {
       name: req.body.name,
-      goals: Number(req.body.goals),
-      assists: Number(req.body.assists),
-      played: Number(req.body.played),
-      yellowCards: Number(req.body.yellowCards) || 0, // ✅ new
-      redCards: Number(req.body.redCards) || 0, // ✅ new
-      debt: Number(req.body.debt),
+      goals: Number(req.body.goals) || 0,
+      assists: Number(req.body.assists) || 0,
+      played: Number(req.body.played) || 0,
+      yellowCards: Number(req.body.yellowCards) || 0,
+      redCards: Number(req.body.redCards) || 0,
+      paid: Number(req.body.paid) || 0, // ✅ replaces debt
     };
     if (req.file)
       update.avatar = `${process.env.BASE_URL || "http://localhost:8000"}/uploads/${req.file.filename}`;

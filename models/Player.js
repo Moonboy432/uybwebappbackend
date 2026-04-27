@@ -6,9 +6,9 @@ const playerSchema = new mongoose.Schema(
     goals: { type: Number, default: 0 },
     assists: { type: Number, default: 0 },
     played: { type: Number, default: 0 },
-    debt: { type: Number, default: 0 },
-    yellowCards: { type: Number, default: 0 }, // ✅ new
-    redCards: { type: Number, default: 0 }, // ✅ new
+    paid: { type: Number, default: 0 }, // ✅ replaces debt — debt is derived: (played × 200) - paid
+    yellowCards: { type: Number, default: 0 },
+    redCards: { type: Number, default: 0 },
     position: { type: String },
     avatar: { type: String, default: "" },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
