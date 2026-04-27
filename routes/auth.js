@@ -35,15 +35,17 @@ router.post("/signup", async (req, res) => {
       await existingPlayer.save();
     } else {
       // ✅ Create a fresh player document linked to the user
-      await Player.create({
-        name,
-        position,
-        goals: 0,
-        assists: 0,
-        played: 0,
-        debt: 0,
-        userId: user._id, // ✅ link
-      });
+     await Player.create({
+       name,
+       position,
+       goals: 0,
+       assists: 0,
+       played: 0,
+       paid: 0,
+       yellowCards: 0,
+       redCards: 0,
+       userId: user._id,
+     });
     }
 
     res.status(201).json({
