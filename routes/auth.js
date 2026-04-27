@@ -59,15 +59,29 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
+    // ✅ validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Incorrect password" });
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "JWT_SECRET not set on server" });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role, name: user.name },
@@ -75,9 +89,17 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" },
     );
 
-    res.json({ token, role: user.role, name: user.name });
+    return res.json({
+      token,
+      role: user.role,
+      name: user.name,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Login failed", error: err.message });
+    console.error("LOGIN ERROR:", err);
+    return res.status(500).json({
+      message: "Login failed",
+      error: err.message,
+    });
   }
 });
 
