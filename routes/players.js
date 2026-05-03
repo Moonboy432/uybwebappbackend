@@ -36,6 +36,7 @@ router.post("/", protect, upload.single("avatar"), async (req, res) => {
 
     const player = await Player.create({
       name,
+      position: req.body.position || "",
       avatar: req.file ? req.file.path : "",
     });
 
@@ -56,6 +57,8 @@ router.put("/:id", protect, upload.single("avatar"), async (req, res) => {
       yellowCards: Number(req.body.yellowCards) || 0,
       redCards: Number(req.body.redCards) || 0,
       paid: Number(req.body.paid) || 0,
+      cleanSheets: Number(req.body.cleanSheets) || 0,
+      position: req.body.position || "",
     };
 
     if (req.file) {

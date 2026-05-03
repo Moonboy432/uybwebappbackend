@@ -10,6 +10,7 @@ const playerSchema = new mongoose.Schema(
     yellowCards: { type: Number, default: 0 },
     redCards: { type: Number, default: 0 },
     position: { type: String },
+    cleanSheets : {type: Number, default: 0 },
     avatar: { type: String, default: "" },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
