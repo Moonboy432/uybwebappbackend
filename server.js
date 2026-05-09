@@ -12,7 +12,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "*", // you can tighten later
+    origin: "https://uybwebapp.vercel.app", // you can tighten later
     credentials: true,
   }),
 );
