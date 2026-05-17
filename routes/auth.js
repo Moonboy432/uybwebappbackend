@@ -6,13 +6,9 @@ const nodemailer = require("nodemailer");
 const User = require("../models/User");
 const Player = require("../models/Player");
 
-// Temporary in-memory store for reset codes
-// (works fine for a single-server app; swap for a DB field if you prefer)
-const resetCodes = {};
-
-// Nodemailer transporter — add these to your .env file:
-// EMAIL_USER=your@gmail.com
-// EMAIL_PASS=your_gmail_app_password
+// ─────────────────────────────────────────────
+// NODEMAILER SETUP
+// ─────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -22,7 +18,12 @@ const transporter = nodemailer.createTransport({
 });
 
 // ─────────────────────────────────────────────
-// SIGNUP
+// RESET CODE STORE
+// ─────────────────────────────────────────────
+const resetCodes = {};
+
+// ─────────────────────────────────────────────
+// SIGNUP — saves as pending, no player created yet
 // ─────────────────────────────────────────────
 router.post("/signup", async (req, res) => {
   const { name, email, password, phone, position } = req.body;
@@ -35,40 +36,25 @@ router.post("/signup", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    await User.create({
       name,
       email,
       password: hashedPassword,
       phone,
       position,
+      status: "pending",
     });
 
-    const existingPlayer = await Player.findOne({ name });
-    if (existingPlayer) {
-      existingPlayer.userId = user._id;
-      await existingPlayer.save();
-    } else {
-      await Player.create({
-        name,
-        position,
-        goals: 0,
-        assists: 0,
-        played: 0,
-        paid: 0,
-        yellowCards: 0,
-        redCards: 0,
-        userId: user._id,
-      });
-    }
-
-    res.status(201).json({ message: "Account created successfully", user });
+    return res.status(201).json({
+      message: "Signup request submitted. Please wait for admin approval.",
+    });
   } catch (err) {
     res.status(500).json({ message: "Signup failed", error: err.message });
   }
 });
 
 // ─────────────────────────────────────────────
-// LOGIN
+// LOGIN — blocks pending and rejected users
 // ─────────────────────────────────────────────
 router.post("/login", async (req, res) => {
   try {
@@ -81,6 +67,18 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (user.role !== "admin" && user.status === "pending") {
+      return res.status(403).json({
+        message: "Your account needs to be activated by admin.",
+      });
+    }
+
+    if (user.role !== "admin" && user.status === "rejected") {
+      return res.status(403).json({
+        message: "Your signup request was rejected. Please contact the admin.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -108,6 +106,104 @@ router.post("/login", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET PENDING SIGNUPS — admin only
+// ─────────────────────────────────────────────
+router.get("/pending", async (req, res) => {
+  try {
+    const pending = await User.find({ status: "pending" }).select("-password");
+    return res.status(200).json(pending);
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch pending users", error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// APPROVE SIGNUP — creates player, marks approved
+// ─────────────────────────────────────────────
+router.post("/approve/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.status = "approved";
+    await user.save();
+
+    const existingPlayer = await Player.findOne({ name: user.name });
+    if (existingPlayer) {
+      existingPlayer.userId = user._id;
+      await existingPlayer.save();
+    } else {
+      await Player.create({
+        name: user.name,
+        position: user.position,
+        goals: 0,
+        assists: 0,
+        played: 0,
+        paid: 0,
+        yellowCards: 0,
+        redCards: 0,
+        userId: user._id,
+      });
+    }
+
+    await transporter.sendMail({
+      from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "You're in the squad! ✅",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
+          <h2 style="color: #3b82f6;">Welcome to UYBFC, ${user.name}!</h2>
+          <p>Your signup has been <strong>approved</strong> by the admin.</p>
+          <p>You can now log in to the app and access your player dashboard.</p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({ message: "User approved successfully." });
+  } catch (err) {
+    console.error("APPROVE ERROR:", err);
+    return res
+      .status(500)
+      .json({ message: "Approval failed", error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// REJECT SIGNUP — marks rejected, notifies user
+// ─────────────────────────────────────────────
+router.post("/reject/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.status = "rejected";
+    await user.save();
+
+    await transporter.sendMail({
+      from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "UYBFC Signup Update",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
+          <h2 style="color: #3b82f6;">Hi ${user.name},</h2>
+          <p>Unfortunately your signup request has been <strong>rejected</strong>.</p>
+          <p>If you think this is a mistake, please contact the admin directly.</p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({ message: "User rejected." });
+  } catch (err) {
+    console.error("REJECT ERROR:", err);
+    return res
+      .status(500)
+      .json({ message: "Rejection failed", error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // FORGOT PASSWORD — Step 1: Send reset code
 // ─────────────────────────────────────────────
 router.post("/forgot-password", async (req, res) => {
@@ -116,14 +212,12 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const user = await User.findOne({ email });
 
-    // Always return success to avoid revealing registered emails
     if (!user) {
       return res
         .status(200)
         .json({ message: "If that email exists, a code has been sent." });
     }
 
-    // Generate a 6-digit code and store it with a 15-minute expiry
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     resetCodes[email] = {
       code,
@@ -134,6 +228,7 @@ router.post("/forgot-password", async (req, res) => {
       from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Password Reset Code",
+      text: `Your UYBFC password reset code is: ${code}. It expires in 15 minutes.`,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
           <h2 style="color: #3b82f6;">Password Reset</h2>
@@ -156,7 +251,7 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// VERIFY RESET CODE — Step 2: Check the code
+// VERIFY RESET CODE — Step 2
 // ─────────────────────────────────────────────
 router.post("/verify-reset-code", async (req, res) => {
   const { email, code } = req.body;
@@ -191,7 +286,7 @@ router.post("/verify-reset-code", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// RESET PASSWORD — Step 3: Save new password
+// RESET PASSWORD — Step 3
 // ─────────────────────────────────────────────
 router.post("/reset-password", async (req, res) => {
   const { email, code, newPassword } = req.body;
@@ -213,7 +308,6 @@ router.post("/reset-password", async (req, res) => {
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
-    // Invalidate the code immediately after use
     delete resetCodes[email];
 
     return res.status(200).json({ message: "Password updated successfully." });
