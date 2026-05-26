@@ -69,12 +69,16 @@ router.put("/:id", protect, upload.single("avatar"), async (req, res) => {
       new: true,
     });
 
+    // ✅ Sync name change to the linked User account
+    if (updated.userId && req.body.name) {
+      await User.findByIdAndUpdate(updated.userId, { name: req.body.name });
+    }
+
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: "Failed to update player" });
   }
 });
-
 // DELETE player (and linked user)
 router.delete("/:id", protect, async (req, res) => {
   try {

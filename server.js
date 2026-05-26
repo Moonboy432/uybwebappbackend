@@ -12,7 +12,12 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["https://uybwebapp.vercel.app", "https://uybfc.com", "https://www.uybfc.com","http://localhost:5173"], // you can tighten later
+    origin: [
+      "https://uybwebapp.vercel.app",
+      "https://uybfc.com",
+      "https://www.uybfc.com",
+      "http://localhost:5173",
+    ], // you can tighten later
     credentials: true,
   }),
 );
