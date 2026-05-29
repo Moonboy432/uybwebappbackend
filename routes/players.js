@@ -99,4 +99,24 @@ router.delete("/:id", protect, async (req, res) => {
   }
 });
 
+// PATCH update own avatar (URL sent from client after Cloudinary upload)
+router.patch("/:id/avatar", protect, async (req, res) => {
+  try {
+    const player = await Player.findById(req.params.id);
+    if (!player) return res.status(404).json({ message: "Player not found" });
+
+    // Ensure the logged-in user owns this player record
+    if (!player.userId || player.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    player.avatar = req.body.avatar ?? "";
+    await player.save();
+
+    res.json({ avatar: player.avatar });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update avatar" });
+  }
+});
+
 module.exports = router;
