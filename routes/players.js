@@ -58,6 +58,7 @@ router.put("/:id", protect, upload.single("avatar"), async (req, res) => {
       redCards: Number(req.body.redCards) || 0,
       paid: Number(req.body.paid) || 0,
       cleanSheets: Number(req.body.cleanSheets) || 0,
+      playerOfTheWeek: Number(req.body.playerOfTheWeek) || 0,
       position: req.body.position || "",
     };
 
