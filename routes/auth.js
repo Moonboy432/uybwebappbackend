@@ -148,20 +148,24 @@ router.post("/approve/:userId", async (req, res) => {
       });
     }
 
-    await transporter.sendMail({
-      from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: "You're in the squad! ✅",
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
-          <h2 style="color: #3b82f6;">Welcome to UYBFC, ${user.name}!</h2>
-          <p>Your signup has been <strong>approved</strong> by the admin.</p>
-          <p>You can now log in to the app and access your player dashboard.</p>
-        </div>
-      `,
-    });
+    // Respond immediately — don't block on email
+    res.status(200).json({ message: "User approved successfully." });
 
-    return res.status(200).json({ message: "User approved successfully." });
+    // Fire-and-forget: send email after responding, log if it fails
+    transporter
+      .sendMail({
+        from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: "You're in the squad! ✅",
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
+            <h2 style="color: #3b82f6;">Welcome to UYBFC, ${user.name}!</h2>
+            <p>Your signup has been <strong>approved</strong> by the admin.</p>
+            <p>You can now log in to the app and access your player dashboard.</p>
+          </div>
+        `,
+      })
+      .catch((err) => console.error("APPROVE EMAIL ERROR:", err));
   } catch (err) {
     console.error("APPROVE ERROR:", err);
     return res
@@ -181,6 +185,8 @@ router.post("/reject/:userId", async (req, res) => {
     user.status = "rejected";
     await user.save();
 
+    res.status(200).json({ message: "User rejected." });
+
     await transporter.sendMail({
       from: `"UYBFC App" <${process.env.EMAIL_USER}>`,
       to: user.email,
@@ -194,7 +200,6 @@ router.post("/reject/:userId", async (req, res) => {
       `,
     });
 
-    return res.status(200).json({ message: "User rejected." });
   } catch (err) {
     console.error("REJECT ERROR:", err);
     return res
