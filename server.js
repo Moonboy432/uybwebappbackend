@@ -7,6 +7,7 @@ const path = require("path");
 const configRoutes = require("./routes/config");
 const authRoutes = require("./routes/auth");
 const playerRoutes = require("./routes/players");
+const gameDayRoutes = require("./routes/gamedays");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/config", configRoutes);
+app.use("/api/gamedays", gameDayRoutes);
 
 const PORT = process.env.PORT || 8000;
 
